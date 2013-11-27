@@ -21,7 +21,7 @@ import com.google.appengine.labs.repackaged.com.google.common.collect.Lists;
 import com.nomad.handsome.core.HandsomeObject;
 import org.json.simple.JSONValue;
 
-import java.io.*;
+import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -43,6 +43,15 @@ public class HandsomeEntity extends HandsomeObject implements Serializable {
     public static final int ARCHIVED       = 2;
     public static final int SUSPENDED      = 3;
     public int _status;
+
+
+    public void activate(){
+        _status = ACTIVE;
+    }
+
+    public void deactivate(){
+        _status = INACTIVE;
+    }
 
     public void setStatus(Long l){
         _status = l.intValue();
@@ -101,6 +110,10 @@ public class HandsomeEntity extends HandsomeObject implements Serializable {
         this.setEntity(entity);
     }
 
+    /**
+     * Builds handsome object from entity
+     * @param entity
+     */
     protected void setEntity(Entity entity){
 
         this.entity = entity;

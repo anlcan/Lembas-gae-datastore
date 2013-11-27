@@ -70,7 +70,7 @@ public class EntityManager<T extends HandsomeEntity> {
         Utils.assertTrue(handsomeEntity != null, "handsomeEntity cannot be null");
         Utils.assertTrue(handsomeEntity.getClass().getSimpleName().equalsIgnoreCase(getKind()), "cannot insert different class");
 
-        handsomeEntity.copy(handsomeEntity);  // apply changes on the object to underlying entity
+        handsomeEntity.copy(handsomeEntity);  // FIXME:apply changes on the object to underlying entity
         DatastoreService ds = getDatastoreService();
         HandsomeEntity entityNoSql = downCastEntity(handsomeEntity);
         Entity entity = entityNoSql.getEntity();
@@ -152,6 +152,14 @@ public class EntityManager<T extends HandsomeEntity> {
     }
 
 
+    public T entityWithValue(String fieldName, Object fieldValue){
+        Iterable<T> result = entitiesWithValue(fieldName, fieldValue);
+        if ( result.iterator().hasNext()){
+            return result.iterator().next();
+        } else {
+            return null;
+        }
+    }
 
     public T entityWithParent(HandsomeEntity parent){
 
@@ -182,9 +190,20 @@ public class EntityManager<T extends HandsomeEntity> {
     }
 
     public ArrayList<T> entitiesWithParentAndValues(HandsomeEntity parent, Map<String, Object> values){
-        return entitiesWithParentAndValuesSorted(parent,values, null);
+        return entitiesWithParentAndValuesSorted(parent, values, null);
     }
 
+    public ArrayList<T> entitiesWithValues( Map<String, Object> values){
+        return entitiesWithParentAndValuesSorted(null,values, null);
+    }
+
+    /**
+     * https://developers.google.com/appengine/docs/java/datastore/queries
+     * @param parent
+     * @param values
+     * @param sortDirectionMap
+     * @return
+     */
     public ArrayList<T> entitiesWithParentAndValuesSorted(HandsomeEntity parent, Map<String, Object> values, Map<String, Query.SortDirection> sortDirectionMap){
 
         Query query = new Query(getKind());
@@ -193,14 +212,23 @@ public class EntityManager<T extends HandsomeEntity> {
             query.setAncestor(parent.getKey());
 
         if (values != null){
+            ArrayList<Query.Filter> filters = new ArrayList<>();
             for ( String fieldName : values.keySet()){
                 Object fieldValue = values.get(fieldName);
                 Query.Filter filter =
                         new Query.FilterPredicate(fieldName,
                                 Query.FilterOperator.EQUAL, fieldValue);
 
-                query.setFilter(filter);
+                filters.add(filter);
             }
+            if ( filters.size() > 1) {
+                Query.Filter compositeFilter =Query.CompositeFilterOperator.and(filters);
+                query.setFilter(compositeFilter);
+
+            } else {
+                query.setFilter(filters.get(0));
+            }
+
         }
 
         if ( sortDirectionMap != null){
