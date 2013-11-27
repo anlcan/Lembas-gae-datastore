@@ -19,8 +19,14 @@ import com.google.appengine.api.datastore.Key;
 import com.google.appengine.api.datastore.KeyFactory;
 import com.google.appengine.labs.repackaged.com.google.common.collect.Lists;
 import com.nomad.handsome.core.HandsomeObject;
+import com.nomad.handsome.core.HandsomeUtil;
+import com.nomad.handsome.core.UtilSerializeException;
+import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.ObjectStreamException;
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -210,7 +216,7 @@ public class HandsomeEntity extends HandsomeObject implements Serializable {
     }
 
 
-    /*
+
     private void writeObject(java.io.ObjectOutputStream out)
             throws IOException {
 
@@ -227,26 +233,15 @@ public class HandsomeEntity extends HandsomeObject implements Serializable {
 
     }
     private void readObject(java.io.ObjectInputStream in)
-            throws IOException, ClassNotFoundException{
+            throws IOException, ClassNotFoundException, UtilSerializeException {
 
         InputStreamReader isr = new InputStreamReader(in, "UTF8");
-
-        StringBuffer buffer = new StringBuffer();
-        Reader reader = new BufferedReader(isr);
-        int ch;
-        while ((ch = reader.read()) > -1) {
-            buffer.append((char) ch);
-        }
-
-        String input = buffer.toString();
-        System.out.println(input);
-
+        JSONObject object = (JSONObject) JSONValue.parse(isr);
+        HandsomeEntity shallow = (HandsomeEntity) HandsomeUtil.deserialize(object);
+        this.copy(shallow);
     }
     private void readObjectNoData()
             throws ObjectStreamException {
         System.out.println("reached");
     }
-*/
-
-
 }
