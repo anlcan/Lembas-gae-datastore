@@ -75,6 +75,7 @@ public class EntityManager<T extends HandsomeEntity> {
         HandsomeEntity entityNoSql = downCastEntity(handsomeEntity);
         Entity entity = entityNoSql.getEntity();
         ds.put(entity);
+
         return handsomeEntity;
     }
 
@@ -97,14 +98,6 @@ public class EntityManager<T extends HandsomeEntity> {
         //return entityClass.getName();
     }
 
-    /**
-     *
-     * @param userId
-     * @return
-     */
-    public Key createEntityKey(String userId) {
-        return KeyFactory.createKey(getKind(), userId);
-    }
 
     /**
      * Looks up a demo entity by key.
@@ -339,6 +332,11 @@ public class EntityManager<T extends HandsomeEntity> {
         return instance;
     };
 
+    public T fromParentKey(String keyString){
+        Key key = KeyFactory.stringToKey(keyString);
+        return  fromParentKey(key);
+    }
+
     /**
      * Creates a model the entity based on com.nomad.handsome.datastore entity.
      *
@@ -393,7 +391,7 @@ public class EntityManager<T extends HandsomeEntity> {
         return instance;
     }
 
-    public T newEntitiy() {
+    public T newEntity() {
         T instance = null;
         try {
             instance = this.entityClass.newInstance();
@@ -403,7 +401,7 @@ public class EntityManager<T extends HandsomeEntity> {
             e.printStackTrace();
         }
         instance.entity = new Entity( KeyFactory.createKey(getKind(), instance.objectKey));
-
+        instance.objectKey = KeyFactory.keyToString(instance.entity.getKey());
         return instance;
     }
 }

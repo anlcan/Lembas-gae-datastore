@@ -43,13 +43,14 @@ import java.util.UUID;
 public class HandsomeEntity extends HandsomeObject implements Serializable {
     protected Entity entity;
 
+    //private static final long serialVersionUID = 112671230986712376L;
+
     // GENERIC STATUS FOR ENTITIES
     public static final int INACTIVE       = 0;
     public static final int ACTIVE         = 1;
     public static final int ARCHIVED       = 2;
     public static final int SUSPENDED      = 3;
     public int _status;
-
 
     public void activate(){
         _status = ACTIVE;
@@ -59,8 +60,12 @@ public class HandsomeEntity extends HandsomeObject implements Serializable {
         _status = INACTIVE;
     }
 
+    public int getStatus() {
+        return _status;
+    }
+
     public void setStatus(Long l){
-        _status = l.intValue();
+        setStatus(l.intValue());
     }
 
     public void setStatus(int s){
@@ -72,7 +77,6 @@ public class HandsomeEntity extends HandsomeObject implements Serializable {
 //        Key key = KeyFactory.createKey(getClassName(), this.objectKey);
 //        this.entity = new Entity(key);
     }
-
 
     public HandsomeEntity(String keyName){
         this.entity = new Entity(this.getClass().getSimpleName(), keyName);
@@ -239,6 +243,8 @@ public class HandsomeEntity extends HandsomeObject implements Serializable {
         JSONObject object = (JSONObject) JSONValue.parse(isr);
         HandsomeEntity shallow = (HandsomeEntity) HandsomeUtil.deserialize(object);
         this.copy(shallow);
+        shallow.objectKey = (String) object.get(objectKey);
+
     }
     private void readObjectNoData()
             throws ObjectStreamException {
