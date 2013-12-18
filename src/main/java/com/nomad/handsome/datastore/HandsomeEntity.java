@@ -65,10 +65,10 @@ public class HandsomeEntity extends HandsomeObject implements Serializable {
     }
 
     public void setStatus(Long l){
-        setStatus(l.intValue());
+        setCurrentStatus(l.intValue());
     }
 
-    public void setStatus(int s){
+    public void setCurrentStatus(int s){
         _status = s;
     }
 
@@ -88,6 +88,8 @@ public class HandsomeEntity extends HandsomeObject implements Serializable {
         this.entity = new Entity(this.getClass().getSimpleName(), keyName, parentKey);
         this.objectKey =  KeyFactory.keyToString(entity.getKey());
     }
+
+
 
     public void copy(HandsomeEntity that){
 
@@ -113,6 +115,50 @@ public class HandsomeEntity extends HandsomeObject implements Serializable {
                 exception.printStackTrace();
             }
         }
+    }
+
+
+    public void setField(Field f, Object value ) throws IllegalAccessException {
+        //f.set(this, value);
+        super.setField(f, value);
+        if ( this.entity != null){
+
+            if ( f.getType().isEnum()){
+
+                this.entity.setProperty(f.getName(),  ((Enum)value).ordinal());
+
+            } else {
+                this.entity.setProperty(f.getName(), value);
+            }
+        }
+    }
+
+
+    public void readField(Field f, Object value) throws IllegalAccessException {
+        if ( f.getType().isEnum()){
+
+            Class z = f.getType();
+            Object[] cons = z.getEnumConstants();
+            int intValue = -1;
+            if ( value instanceof Long)
+                intValue = ((Long)value).intValue();
+
+            for (int i = 0; i < cons.length; i++) {
+                if (i == intValue) {
+                    f.set(this, Enum.valueOf((Class<Enum>) f.getType(), cons[i].toString()));
+                }
+            }
+
+        } else {
+            f.set(this, value);
+        }
+    }
+
+    /**
+     * writes changes to entity
+     */
+    public void write(){
+        copy(this);
     }
 
     protected HandsomeEntity(Entity entity) {
@@ -158,8 +204,11 @@ public class HandsomeEntity extends HandsomeObject implements Serializable {
                     }
                 }
 
-                if (!consumed)
-                    f.set(this, value);
+                if (!consumed) {
+                    //f.set(this, value);
+                    readField(f,value);
+                }
+
 
             } catch (NoSuchFieldException e) {
                 logger.info("no such field, will skip:"+fieldName);
@@ -175,13 +224,7 @@ public class HandsomeEntity extends HandsomeObject implements Serializable {
         return entity;
     }
 
-    public void setField(Field f, Object value ) throws IllegalAccessException {
-        //f.set(this, value);
-        super.setField(f, value);
-        if ( this.entity != null)
-            this.entity.setProperty(f.getName(), value);
 
-    }
 
     public Boolean setProperty(String fieldName, Object value){
 
