@@ -201,8 +201,10 @@ public class EntityManager<T extends HandsomeEntity> {
 
         Query query = new Query(getKind());
 
-        if ( parent != null)
+        if ( parent != null) {
             query.setAncestor(parent.getKey());
+
+        }
 
         if (values != null){
             ArrayList<Query.Filter> filters = new ArrayList<>();
