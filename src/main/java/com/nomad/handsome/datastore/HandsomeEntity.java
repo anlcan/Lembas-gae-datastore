@@ -42,7 +42,6 @@ import java.util.UUID;
  */
 public class HandsomeEntity extends HandsomeObject implements Serializable {
     protected Entity entity;
-    protected Key entityKey;
 
     //private static final long serialVersionUID = 112671230986712376L;
 
