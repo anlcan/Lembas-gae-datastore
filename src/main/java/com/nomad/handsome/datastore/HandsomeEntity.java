@@ -17,6 +17,7 @@ package com.nomad.handsome.datastore;
 import com.google.appengine.api.datastore.Entity;
 import com.google.appengine.api.datastore.Key;
 import com.google.appengine.api.datastore.KeyFactory;
+import com.google.appengine.api.datastore.Text;
 import com.google.common.collect.Lists;
 import com.nomad.handsome.core.HandsomeObject;
 import com.nomad.handsome.core.HandsomeUtil;
@@ -65,12 +66,17 @@ public class HandsomeEntity extends HandsomeObject implements Serializable {
     }
 
     public void setStatus(Long l){
-        setCurrentStatus(l.intValue());
+        setStatus(l.intValue());
     }
 
-    public void setCurrentStatus(int s){
+    public void setStatus(int s){
         _status = s;
     }
+
+    public void set_status(int s){
+        _status = s;
+    }
+
 
     public HandsomeEntity() {
         this.objectKey =  UUID.randomUUID().toString();
@@ -88,7 +94,6 @@ public class HandsomeEntity extends HandsomeObject implements Serializable {
         this.entity = new Entity(this.getClass().getSimpleName(), keyName, parentKey);
         this.objectKey =  KeyFactory.keyToString(entity.getKey());
     }
-
 
 
     public void copy(HandsomeEntity that){
@@ -121,15 +126,17 @@ public class HandsomeEntity extends HandsomeObject implements Serializable {
     public void setField(Field f, Object value ) throws IllegalAccessException {
         //f.set(this, value);
         super.setField(f, value);
-        if ( this.entity != null){
+        Object _value = value;
 
+        if ( this.entity != null){
             if ( f.getType().isEnum()){
 
-                this.entity.setProperty(f.getName(),  ((Enum)value).ordinal());
-
-            } else {
-                this.entity.setProperty(f.getName(), value);
+              _value = ((Enum)value).ordinal();
             }
+
+            if ( this.entity.getProperty(f.getName()) != _value)
+                this.entity.setProperty(f.getName(), _value);
+
         }
     }
 
@@ -148,7 +155,6 @@ public class HandsomeEntity extends HandsomeObject implements Serializable {
                     f.set(this, Enum.valueOf((Class<Enum>) f.getType(), cons[i].toString()));
                 }
             }
-
         } else {
             f.set(this, value);
         }
@@ -166,8 +172,34 @@ public class HandsomeEntity extends HandsomeObject implements Serializable {
         this.setEntity(entity);
     }
 
+
+    public boolean setupFieldWithMehod(String fieldName, Object value, Method[] methods) throws InvocationTargetException, IllegalAccessException {
+        boolean consumed = false;
+        // look for a setter method
+        String setterName= fieldName;
+        //underscore is used for inner fields!
+        if ( setterName.startsWith("_"))
+            setterName = fieldName.substring(1);
+        setterName = "set" + setterName;
+
+        for ( Method m : methods) {
+            if ( m.getName().equalsIgnoreCase(setterName)){
+                if ( m.getParameterTypes().length >0 ) {
+                    if (m.getParameterTypes()[0].equals(value.getClass())) {
+
+                        m.invoke(this, value);
+                        consumed = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        return consumed;
+    }
+
     /**
-     * Builds handsome object from entity
+     * Builds handsome object from entity, setup properties
      * @param entity
      */
     protected void setEntity(Entity entity){
@@ -182,27 +214,7 @@ public class HandsomeEntity extends HandsomeObject implements Serializable {
             try {
                 Field f = this.getClass().getField(fieldName);
                 Object value = this.entity.getProperty(fieldName);
-
-                boolean consumed = false;
-                // look for a setter method
-                String setterName= f.getName();
-                //underscore is used for inner fields!
-                if ( setterName.startsWith("_"))
-                    setterName = fieldName.substring(1);
-                setterName = "set" + setterName;
-
-                for ( Method m : methods) {
-                    if ( m.getName().equalsIgnoreCase(setterName)){
-                        if ( m.getParameterTypes().length >0 ) {
-                            if (m.getParameterTypes()[0].equals(value.getClass())) {
-
-                                m.invoke(this, value);
-                                consumed = true;
-                                break;
-                            }
-                        }
-                    }
-                }
+                boolean consumed = setupFieldWithMehod(fieldName, value, methods);
 
                 if (!consumed) {
                     //f.set(this, value);
@@ -212,9 +224,7 @@ public class HandsomeEntity extends HandsomeObject implements Serializable {
 
             } catch (NoSuchFieldException e) {
                 logger.info("no such field, will skip:"+fieldName);
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
-            } catch (InvocationTargetException e) {
+            } catch (IllegalAccessException | InvocationTargetException e) {
                 e.printStackTrace();
             }
         }
@@ -223,6 +233,7 @@ public class HandsomeEntity extends HandsomeObject implements Serializable {
     public Entity getEntity() {
         return entity;
     }
+
 
 
 
@@ -263,16 +274,19 @@ public class HandsomeEntity extends HandsomeObject implements Serializable {
         return null;
     }
 
-
+    public Key getParentKey(){
+        Key key = this.getKey();
+        return key.getParent();
+    }
 
     private void writeObject(java.io.ObjectOutputStream out)
             throws IOException {
 
         try {
-            org.json.simple.JSONObject result = HandsomeUtil.serialize(this);
+            org.json.simple.JSONObject result = HandsomeUtil.serialize(this, false);
             String jsonString = result.toJSONString();
             out.write(jsonString.getBytes());
-
+            logger.info("> serializing"+ this.getClassName() +":"+ jsonString);
         } catch (UtilSerializeException e) {
             e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
             throw new IOException();
@@ -280,6 +294,7 @@ public class HandsomeEntity extends HandsomeObject implements Serializable {
         }
 
     }
+
     private void readObject(java.io.ObjectInputStream in)
             throws IOException, ClassNotFoundException, UtilSerializeException {
 
@@ -287,9 +302,10 @@ public class HandsomeEntity extends HandsomeObject implements Serializable {
         JSONObject object = (JSONObject) JSONValue.parse(isr);
         HandsomeEntity shallow = (HandsomeEntity) HandsomeUtil.deserialize(object);
         this.copy(shallow);
-        shallow.objectKey = (String) object.get(objectKey);
-
+        this.objectKey = shallow.objectKey;
+        logger.info("< deserializing "+this.getClassName() +":" + object.toJSONString());
     }
+
     private void readObjectNoData()
             throws ObjectStreamException {
         System.out.println("reached");

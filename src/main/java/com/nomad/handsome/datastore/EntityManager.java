@@ -14,6 +14,8 @@
 package com.nomad.handsome.datastore;
 
 import com.google.appengine.api.datastore.*;
+import com.google.appengine.api.memcache.MemcacheService;
+import com.google.appengine.api.memcache.MemcacheServiceFactory;
 import com.google.common.collect.Lists;
 import org.apache.log4j.Logger;
 
@@ -33,6 +35,8 @@ public class EntityManager<T extends HandsomeEntity> {
             Logger.getLogger(EntityManager.class.getCanonicalName());
 
     protected  Class<T> entityClass;
+
+    //public boolean useMemcache = true;
 
     public EntityManager(Class<T> entityClass) {
         this.entityClass = entityClass;
@@ -54,6 +58,7 @@ public class EntityManager<T extends HandsomeEntity> {
                 ds.delete(entityNoSql.getEntity().getKey());
                 txn.commit();
                 logger.info("entity deleted.");
+                removeFromCache(handsomeEntity.objectKey);
                 return handsomeEntity;
             }
         } catch (Exception e) {
@@ -66,9 +71,30 @@ public class EntityManager<T extends HandsomeEntity> {
         return null;
     }
 
+    private void initEntity(T handsomeEntity){
+        DatastoreService ds = getDatastoreService();
+        Transaction txn = ds.beginTransaction();
+
+        try {
+
+            Entity entity = getDatastoreEntity(ds, KeyFactory.stringToKey(handsomeEntity.objectKey));
+            handsomeEntity.entity = entity;
+        }
+        finally {
+            if (txn.isActive()) {
+                txn.rollback();
+            }
+        }
+
+    }
+
     public T upsertEntity(T handsomeEntity) {
         Utils.assertTrue(handsomeEntity != null, "handsomeEntity cannot be null");
         Utils.assertTrue(handsomeEntity.getClass().getSimpleName().equalsIgnoreCase(getKind()), "cannot insert different class");
+
+        if ( handsomeEntity.entity == null){
+            initEntity(handsomeEntity);
+        }
 
         handsomeEntity.copy(handsomeEntity);  // FIXME:apply changes on the object to underlying entity
         DatastoreService ds = getDatastoreService();
@@ -76,6 +102,7 @@ public class EntityManager<T extends HandsomeEntity> {
         Entity entity = entityNoSql.getEntity();
         ds.put(entity);
 
+        storeEntityToCache(handsomeEntity);
         return handsomeEntity;
     }
 
@@ -99,13 +126,38 @@ public class EntityManager<T extends HandsomeEntity> {
     }
 
 
+    public MemcacheService getCacheService(){
+        return MemcacheServiceFactory.getMemcacheService(getKind());
+    }
+
+    public T getEntityFromCache(String key) {
+        return (T) getCacheService().get(key);
+    }
+
+    public void storeEntityToCache(HandsomeEntity  entity){
+        if ( entity.objectKey == null){
+            return;
+        }
+        getCacheService().put(entity.objectKey, entity);
+    }
+
+    public void removeFromCache(String key){
+        getCacheService().delete(key);
+    }
+
+
     /**
-     * Looks up a demo entity by key.
+     * Looks up a  entity by key.
      *
      * @param key the entity key.
      * @return the demo entity; null if the key could not be found.
      */
     public T getEntity(Key key) {
+        if ( getEntityFromCache(KeyFactory.keyToString(key)) != null) {
+            T t =getEntityFromCache(KeyFactory.keyToString(key));
+            return t;
+        }
+
         DatastoreService ds = getDatastoreService();
         Entity entity = getDatastoreEntity(ds, key);
         if (entity != null) {
@@ -357,6 +409,7 @@ public class EntityManager<T extends HandsomeEntity> {
         }
         instance.setEntity(entity);
 
+        storeEntityToCache(instance);
         return instance;
     };
 
@@ -373,7 +426,7 @@ public class EntityManager<T extends HandsomeEntity> {
         } catch (IllegalAccessException e) {
             e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
         }
-
+        storeEntityToCache(instance);
         return instance;
     }
 
@@ -390,6 +443,7 @@ public class EntityManager<T extends HandsomeEntity> {
             e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
         }
 
+        storeEntityToCache(instance);
         return instance;
     }
 
@@ -404,6 +458,8 @@ public class EntityManager<T extends HandsomeEntity> {
         }
         instance.entity = new Entity( KeyFactory.createKey(getKind(), instance.objectKey));
         instance.objectKey = KeyFactory.keyToString(instance.entity.getKey());
+
+        storeEntityToCache(instance);
         return instance;
     }
 }
