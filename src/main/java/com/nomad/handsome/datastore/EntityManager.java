@@ -42,7 +42,6 @@ public class EntityManager<T extends HandsomeEntity> {
         this.entityClass = entityClass;
     }
 
-
     public T deleteEntity(String entityKey) {
         return deleteEntity(getEntity(entityKey));
     }
@@ -287,6 +286,8 @@ public class EntityManager<T extends HandsomeEntity> {
 
         return queryEntities(query, FetchOptions.Builder.withDefaults());
     }
+
+
 
     /**
      * Queries the com.nomad.handsome.datastore for an {@code Iterable} collection of entities.

@@ -17,7 +17,6 @@ package com.nomad.handsome.datastore;
 import com.google.appengine.api.datastore.Entity;
 import com.google.appengine.api.datastore.Key;
 import com.google.appengine.api.datastore.KeyFactory;
-import com.google.appengine.api.datastore.Text;
 import com.google.common.collect.Lists;
 import com.nomad.handsome.core.HandsomeObject;
 import com.nomad.handsome.core.HandsomeUtil;
@@ -212,8 +211,10 @@ public class HandsomeEntity extends HandsomeObject implements Serializable {
 
         for (String fieldName : this.entity.getProperties().keySet()){
             try {
-                Field f = this.getClass().getField(fieldName);
                 Object value = this.entity.getProperty(fieldName);
+                Field f = this.getClass().getField(fieldName);
+                //Class c = f.getClass();
+
                 boolean consumed = setupFieldWithMehod(fieldName, value, methods);
 
                 if (!consumed) {
@@ -286,7 +287,7 @@ public class HandsomeEntity extends HandsomeObject implements Serializable {
             org.json.simple.JSONObject result = HandsomeUtil.serialize(this, false);
             String jsonString = result.toJSONString();
             out.write(jsonString.getBytes());
-            logger.info("> serializing"+ this.getClassName() +":"+ jsonString);
+            //logger.info("> serializing"+ this.getClassName() +":"+ jsonString);
         } catch (UtilSerializeException e) {
             e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
             throw new IOException();
@@ -303,7 +304,7 @@ public class HandsomeEntity extends HandsomeObject implements Serializable {
         HandsomeEntity shallow = (HandsomeEntity) HandsomeUtil.deserialize(object);
         this.copy(shallow);
         this.objectKey = shallow.objectKey;
-        logger.info("< deserializing "+this.getClassName() +":" + object.toJSONString());
+        //logger.info("< deserializing "+this.getClassName() +":" + object.toJSONString());
     }
 
     private void readObjectNoData()
