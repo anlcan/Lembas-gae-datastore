@@ -12,15 +12,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.nomad.handsome.datastore;
+package com.happyblueduck.lembas.datastore;
 
 import com.google.appengine.api.datastore.Entity;
 import com.google.appengine.api.datastore.Key;
 import com.google.appengine.api.datastore.KeyFactory;
 import com.google.common.collect.Lists;
-import com.nomad.handsome.core.HandsomeObject;
-import com.nomad.handsome.core.HandsomeUtil;
-import com.nomad.handsome.core.UtilSerializeException;
+import com.happyblueduck.lembas.core.LembasObject;
+import com.happyblueduck.lembas.core.LembasUtil;
+import com.happyblueduck.lembas.core.UtilSerializeException;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 
@@ -40,7 +40,7 @@ import java.util.UUID;
  *
  * @author Michael Tang (ntang@google.com)
  */
-public class HandsomeEntity extends HandsomeObject implements Serializable {
+public class HandsomeEntity extends LembasObject implements Serializable {
     protected Entity entity;
 
     //private static final long serialVersionUID = 112671230986712376L;
@@ -198,7 +198,7 @@ public class HandsomeEntity extends HandsomeObject implements Serializable {
     }
 
     /**
-     * Builds handsome object from entity, setup properties
+     * Builds lembas object from entity, setup properties
      * @param entity
      */
     protected void setEntity(Entity entity){
@@ -284,7 +284,7 @@ public class HandsomeEntity extends HandsomeObject implements Serializable {
             throws IOException {
 
         try {
-            org.json.simple.JSONObject result = HandsomeUtil.serialize(this, false);
+            org.json.simple.JSONObject result = LembasUtil.serialize(this, false);
             String jsonString = result.toJSONString();
             out.write(jsonString.getBytes());
             //logger.info("> serializing"+ this.getClassName() +":"+ jsonString);
@@ -301,7 +301,7 @@ public class HandsomeEntity extends HandsomeObject implements Serializable {
 
         InputStreamReader isr = new InputStreamReader(in, "UTF8");
         JSONObject object = (JSONObject) JSONValue.parse(isr);
-        HandsomeEntity shallow = (HandsomeEntity) HandsomeUtil.deserialize(object);
+        HandsomeEntity shallow = (HandsomeEntity) LembasUtil.deserialize(object);
         this.copy(shallow);
         this.objectKey = shallow.objectKey;
         //logger.info("< deserializing "+this.getClassName() +":" + object.toJSONString());

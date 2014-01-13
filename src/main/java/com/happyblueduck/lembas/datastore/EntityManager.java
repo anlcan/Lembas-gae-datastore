@@ -11,7 +11,7 @@
  * or implied. See the License for the specific language governing permissions and limitations under
  * the License.
  */
-package com.nomad.handsome.datastore;
+package com.happyblueduck.lembas.datastore;
 
 import com.google.appengine.api.datastore.*;
 import com.google.appengine.api.memcache.MemcacheService;
@@ -61,7 +61,7 @@ public class EntityManager<T extends HandsomeEntity> {
                 return handsomeEntity;
             }
         } catch (Exception e) {
-            logger.error("Failed to delete entity from com.nomad.handsome.datastore:" + e.getMessage());
+            logger.error("Failed to delete entity from com.nomad.lembas.datastore:" + e.getMessage());
         } finally {
             if (txn.isActive()) {
                 txn.rollback();
@@ -175,7 +175,7 @@ public class EntityManager<T extends HandsomeEntity> {
     /**
      * Looks up an entity by key.
      *
-     * @param ds the com.nomad.handsome.datastore service objct.
+     * @param ds the com.nomad.lembas.datastore service objct.
      * @param key the entity key.
      * @return the entity; null if the key could not be found.
      */
@@ -290,13 +290,13 @@ public class EntityManager<T extends HandsomeEntity> {
 
 
     /**
-     * Queries the com.nomad.handsome.datastore for an {@code Iterable} collection of entities.
+     * Queries the com.nomad.lembas.datastore for an {@code Iterable} collection of entities.
      *
      *
-     * @param query com.nomad.handsome.datastore query object.
+     * @param query com.nomad.lembas.datastore query object.
      * @param options query options.
      *
-     * @return an {@code Iterable} collection of com.nomad.handsome.datastore entities.
+     * @return an {@code Iterable} collection of com.nomad.lembas.datastore entities.
      */
     public ArrayList<T> queryEntities(Query query, FetchOptions options) {
         PreparedQuery preparedQuery = getDatastoreService().prepare(query);
@@ -333,7 +333,7 @@ public class EntityManager<T extends HandsomeEntity> {
 
     /**
      * Down casts the entity to a NoSQL base entity. The method makes sure the entity is created by
-     * NoSQL com.nomad.handsome.datastore module.
+     * NoSQL com.nomad.lembas.datastore module.
      *
      * @param demoEntity the model entity.
      *
@@ -349,7 +349,7 @@ public class EntityManager<T extends HandsomeEntity> {
     /**
      * Callback before entity is deleted. Checks if the entity exists.
      *
-     * @param ds the com.nomad.handsome.datastore service object.
+     * @param ds the com.nomad.lembas.datastore service object.
      * @param demoEntity the entity to be deleted.
      *
      * @return true if the entity should be deleted; otherwise, false.
@@ -393,9 +393,9 @@ public class EntityManager<T extends HandsomeEntity> {
     }
 
     /**
-     * Creates a model the entity based on com.nomad.handsome.datastore entity.
+     * Creates a model the entity based on com.nomad.lembas.datastore entity.
      *
-     * @param entity com.nomad.handsome.datastore entity.
+     * @param entity com.nomad.lembas.datastore entity.
      *
      * @return an model entity.
      */
