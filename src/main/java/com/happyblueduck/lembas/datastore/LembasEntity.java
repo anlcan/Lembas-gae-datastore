@@ -40,7 +40,7 @@ import java.util.UUID;
  *
  * @author Michael Tang (ntang@google.com)
  */
-public class HandsomeEntity extends LembasObject implements Serializable {
+public class LembasEntity extends LembasObject implements Serializable {
     protected Entity entity;
 
     //private static final long serialVersionUID = 112671230986712376L;
@@ -50,6 +50,7 @@ public class HandsomeEntity extends LembasObject implements Serializable {
     public static final int ACTIVE         = 1;
     public static final int ARCHIVED       = 2;
     public static final int SUSPENDED      = 3;
+    public static final int CANCELLED      = 3;
     public int _status;
 
     public void activate(){
@@ -77,25 +78,25 @@ public class HandsomeEntity extends LembasObject implements Serializable {
     }
 
 
-    public HandsomeEntity() {
+    public LembasEntity() {
         this.objectKey =  UUID.randomUUID().toString();
 //        Key key = KeyFactory.createKey(getClassName(), this.objectKey);
 //        this.entity = new Entity(key);
     }
 
-    public HandsomeEntity(String keyName){
+    public LembasEntity(String keyName){
         this.entity = new Entity(this.getClass().getSimpleName(), keyName);
         this.objectKey =  KeyFactory.keyToString(entity.getKey());
     }
 
 
-    public HandsomeEntity(String keyName, Key parentKey){
+    public LembasEntity(String keyName, Key parentKey){
         this.entity = new Entity(this.getClass().getSimpleName(), keyName, parentKey);
         this.objectKey =  KeyFactory.keyToString(entity.getKey());
     }
 
 
-    public void copy(HandsomeEntity that){
+    public void copy(LembasEntity that){
 
         ArrayList<Field> fields = Lists.newArrayList(that.getClass().getFields());
         for (Field f :fields){
@@ -108,7 +109,7 @@ public class HandsomeEntity extends LembasObject implements Serializable {
                 if (Modifier.isFinal(modifiers)) continue;
                 if (Modifier.isVolatile(modifiers)) continue;
 
-                if (f.getName().equalsIgnoreCase("objectKey"))
+                if (f.getName().equalsIgnoreCase(LembasUtil.objectKey))
                     continue;
 
                 Object value = f.get(that);
@@ -166,7 +167,7 @@ public class HandsomeEntity extends LembasObject implements Serializable {
         copy(this);
     }
 
-    protected HandsomeEntity(Entity entity) {
+    protected LembasEntity(Entity entity) {
         super();
         this.setEntity(entity);
     }
@@ -301,7 +302,7 @@ public class HandsomeEntity extends LembasObject implements Serializable {
 
         InputStreamReader isr = new InputStreamReader(in, "UTF8");
         JSONObject object = (JSONObject) JSONValue.parse(isr);
-        HandsomeEntity shallow = (HandsomeEntity) LembasUtil.deserialize(object);
+        LembasEntity shallow = (LembasEntity) LembasUtil.deserialize(object);
         this.copy(shallow);
         this.objectKey = shallow.objectKey;
         //logger.info("< deserializing "+this.getClassName() +":" + object.toJSONString());

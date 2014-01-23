@@ -28,9 +28,9 @@ import static com.google.appengine.api.datastore.DatastoreServiceFactory.getData
  *
  * @author Michael Tang (ntang@google.com)
  *
- * @param <T> type extends {@code HandsomeEntity}
+ * @param <T> type extends {@code LembasEntity}
  */
-public class EntityManager<T extends HandsomeEntity> {
+public class EntityManager<T extends LembasEntity> {
     private static final Logger logger =
             Logger.getLogger(EntityManager.class.getCanonicalName());
 
@@ -49,19 +49,19 @@ public class EntityManager<T extends HandsomeEntity> {
 
     public T deleteEntity(T handsomeEntity) {
         Utils.assertTrue(handsomeEntity != null, "entity cannot be null");
-        HandsomeEntity entityNoSql = downCastEntity(handsomeEntity);
+        LembasEntity entityNoSql = downCastEntity(handsomeEntity);
         DatastoreService ds = getDatastoreService();
         Transaction txn = ds.beginTransaction();
         try {
             if (checkEntityForDelete(ds, entityNoSql)) {
-                ds.delete(entityNoSql.getEntity().getKey());
+                ds.delete(entityNoSql.getKey());
                 txn.commit();
                 logger.info("entity deleted.");
                 removeFromCache(handsomeEntity.objectKey);
                 return handsomeEntity;
             }
         } catch (Exception e) {
-            logger.error("Failed to delete entity from com.nomad.lembas.datastore:" + e.getMessage());
+            logger.error("Failed to delete entity from com.happyblueduck.lembas.datastore:" + e.getMessage());
         } finally {
             if (txn.isActive()) {
                 txn.rollback();
@@ -97,7 +97,7 @@ public class EntityManager<T extends HandsomeEntity> {
 
         handsomeEntity.copy(handsomeEntity);  // FIXME:apply changes on the object to underlying entity
         DatastoreService ds = getDatastoreService();
-        HandsomeEntity entityNoSql = downCastEntity(handsomeEntity);
+        LembasEntity entityNoSql = downCastEntity(handsomeEntity);
         Entity entity = entityNoSql.getEntity();
         ds.put(entity);
 
@@ -133,7 +133,7 @@ public class EntityManager<T extends HandsomeEntity> {
         return (T) getCacheService().get(key);
     }
 
-    public void storeEntityToCache(HandsomeEntity  entity){
+    public void storeEntityToCache(LembasEntity entity){
         if ( entity.objectKey == null){
             return;
         }
@@ -175,7 +175,7 @@ public class EntityManager<T extends HandsomeEntity> {
     /**
      * Looks up an entity by key.
      *
-     * @param ds the com.nomad.lembas.datastore service objct.
+     * @param ds the com.nomad.lembas.datastore service object.
      * @param key the entity key.
      * @return the entity; null if the key could not be found.
      */
@@ -205,7 +205,7 @@ public class EntityManager<T extends HandsomeEntity> {
         }
     }
 
-    public T entityWithParent(HandsomeEntity parent){
+    public T entityWithParent(LembasEntity parent){
 
         Iterable<T> result = entitiesWithParentAndValues(parent, null);
         if ( result.iterator().hasNext()){
@@ -222,18 +222,18 @@ public class EntityManager<T extends HandsomeEntity> {
         return entitiesWithParentAndValues(null, values);
     }
 
-    public ArrayList<T> entitiesWithParent(HandsomeEntity parent){
+    public ArrayList<T> entitiesWithParent(LembasEntity parent){
 
         return entitiesWithParentAndValues(parent, null);
     }
 
-    public ArrayList<T> entitiesWithParentWithValue(HandsomeEntity parent, String fieldName, Object fieldValue){
+    public ArrayList<T> entitiesWithParentWithValue(LembasEntity parent, String fieldName, Object fieldValue){
         HashMap<String, Object> values = new LinkedHashMap<String, Object>();
         values.put(fieldName, fieldValue);
         return entitiesWithParentAndValues(parent, values);
     }
 
-    public ArrayList<T> entitiesWithParentAndValues(HandsomeEntity parent, Map<String, Object> values){
+    public ArrayList<T> entitiesWithParentAndValues(LembasEntity parent, Map<String, Object> values){
         return entitiesWithParentAndValuesSorted(parent, values, null);
     }
 
@@ -248,34 +248,10 @@ public class EntityManager<T extends HandsomeEntity> {
      * @param sortDirectionMap
      * @return
      */
-    public ArrayList<T> entitiesWithParentAndValuesSorted(HandsomeEntity parent, Map<String, Object> values, Map<String, Query.SortDirection> sortDirectionMap){
+    public ArrayList<T> entitiesWithParentAndValuesSorted(LembasEntity parent, Map<String, Object> values, Map<String, Query.SortDirection> sortDirectionMap){
 
-        Query query = new Query(getKind());
-
-        if ( parent != null) {
-            query.setAncestor(parent.getKey());
-
-        }
-
-        if (values != null){
-            ArrayList<Query.Filter> filters = new ArrayList<>();
-            for ( String fieldName : values.keySet()){
-                Object fieldValue = values.get(fieldName);
-                Query.Filter filter =
-                        new Query.FilterPredicate(fieldName,
-                                Query.FilterOperator.EQUAL, fieldValue);
-
-                filters.add(filter);
-            }
-            if ( filters.size() > 1) {
-                Query.Filter compositeFilter =Query.CompositeFilterOperator.and(filters);
-                query.setFilter(compositeFilter);
-
-            } else {
-                query.setFilter(filters.get(0));
-            }
-
-        }
+        Query query = query(parent);
+        setFilters(query, values);
 
         if ( sortDirectionMap != null){
 
@@ -284,7 +260,7 @@ public class EntityManager<T extends HandsomeEntity> {
             }
         }
 
-        return queryEntities(query, FetchOptions.Builder.withDefaults());
+        return queryEntities(query);
     }
 
 
@@ -328,7 +304,59 @@ public class EntityManager<T extends HandsomeEntity> {
 
         ArrayList<T> result =  Lists.newArrayList(iterableWrapper);
         return result;
+    }
 
+    public ArrayList<T> queryEntities(Query q) {
+        return queryEntities(q,  FetchOptions.Builder.withDefaults());
+    }
+
+    /** conveinence methods */
+    public Query query() {
+
+        Query query = new Query(this.getKind());
+        return query;
+    }
+
+    public Query query(LembasEntity parent){
+
+        Query query = query();
+
+        if ( parent != null) {
+            query.setAncestor(parent.getKey());
+        }
+        return query;
+    }
+
+    public static Query setFilters(Query query, Map<String, Object>values){
+        if (values != null && values.size() > 0){
+            query.setFilter(makeAndFilter(values));
+        }
+
+        return query;
+    }
+
+    public static Query.Filter makeAndFilter(Map<String, Object> values){
+        if (values != null && values.size() > 0){
+            ArrayList<Query.Filter> filters = new ArrayList<>();
+            for ( String fieldName : values.keySet()){
+                Object fieldValue = values.get(fieldName);
+                Query.Filter filter =
+                        new Query.FilterPredicate(fieldName,
+                                Query.FilterOperator.EQUAL, fieldValue);
+
+                filters.add(filter);
+            }
+            if ( filters.size() > 1) {
+                Query.Filter compositeFilter =Query.CompositeFilterOperator.and(filters);
+                return compositeFilter;
+
+            } else {
+                return filters.get(0);
+            }
+
+        } else {
+            return null;
+        }
     }
 
     /**
@@ -339,27 +367,27 @@ public class EntityManager<T extends HandsomeEntity> {
      *
      * @return the downcast NoSQL base entity.
      */
-    private HandsomeEntity downCastEntity(T demoEntity) {
+    private LembasEntity downCastEntity(T demoEntity) {
         Utils.assertTrue(
-                demoEntity instanceof HandsomeEntity, "entity has to be a valid NoSQL entity");
-        HandsomeEntity entityNoSql = (HandsomeEntity) demoEntity;
+                demoEntity instanceof LembasEntity, "entity has to be a valid NoSQL entity");
+        LembasEntity entityNoSql = (LembasEntity) demoEntity;
         return entityNoSql;
     }
 
     /**
      * Callback before entity is deleted. Checks if the entity exists.
      *
-     * @param ds the com.nomad.lembas.datastore service object.
+     * @param ds the com.happyblueduck.lembas.datastore service object.
      * @param demoEntity the entity to be deleted.
      *
      * @return true if the entity should be deleted; otherwise, false.
      */
-    protected boolean checkEntityForDelete(DatastoreService ds, HandsomeEntity demoEntity) {
+    protected boolean checkEntityForDelete(DatastoreService ds, LembasEntity demoEntity) {
         if (demoEntity != null) {
-            Entity entity = demoEntity.getEntity();
-            if (entity != null) {
-                return getDatastoreEntity(ds, entity.getKey()) != null;
-            }
+//            Entity entity = demoEntity.getEntity();
+//            if (entity != null) {
+            return getDatastoreEntity(ds, demoEntity.getKey()) != null;
+//            }
         }
         return false;
     }
