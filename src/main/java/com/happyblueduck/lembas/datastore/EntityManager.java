@@ -51,6 +51,7 @@ public class EntityManager<T extends LembasEntity> {
         Utils.assertTrue(handsomeEntity != null, "entity cannot be null");
         LembasEntity entityNoSql = downCastEntity(handsomeEntity);
         DatastoreService ds = getDatastoreService();
+
         Transaction txn = ds.beginTransaction();
         try {
             if (checkEntityForDelete(ds, entityNoSql)) {
@@ -68,6 +69,24 @@ public class EntityManager<T extends LembasEntity> {
             }
         }
         return null;
+    }
+
+    /**
+     * Callback before entity is deleted. Checks if the entity exists.
+     *
+     * @param ds the com.happyblueduck.lembas.datastore service object.
+     * @param demoEntity the entity to be deleted.
+     *
+     * @return true if the entity should be deleted; otherwise, false.
+     */
+    protected boolean checkEntityForDelete(DatastoreService ds, LembasEntity demoEntity) {
+        if (demoEntity != null) {
+//            Entity entity = demoEntity.getEntity();
+//            if (entity != null) {
+            return getDatastoreEntity(ds, demoEntity.getKey()) != null;
+//            }
+        }
+        return false;
     }
 
     private void initEntity(T handsomeEntity){
@@ -359,6 +378,14 @@ public class EntityManager<T extends LembasEntity> {
         }
     }
 
+    public static void applyFilters(Query q, ArrayList<Query.Filter> filters){
+        if (filters.size() == 1) {
+            q.setFilter(filters.get(0));
+        } else if (filters.size() > 1) {
+            q.setFilter(Query.CompositeFilterOperator.and(filters));
+        }
+    }
+
     /**
      * Down casts the entity to a NoSQL base entity. The method makes sure the entity is created by
      * NoSQL com.nomad.lembas.datastore module.
@@ -374,23 +401,7 @@ public class EntityManager<T extends LembasEntity> {
         return entityNoSql;
     }
 
-    /**
-     * Callback before entity is deleted. Checks if the entity exists.
-     *
-     * @param ds the com.happyblueduck.lembas.datastore service object.
-     * @param demoEntity the entity to be deleted.
-     *
-     * @return true if the entity should be deleted; otherwise, false.
-     */
-    protected boolean checkEntityForDelete(DatastoreService ds, LembasEntity demoEntity) {
-        if (demoEntity != null) {
-//            Entity entity = demoEntity.getEntity();
-//            if (entity != null) {
-            return getDatastoreEntity(ds, demoEntity.getKey()) != null;
-//            }
-        }
-        return false;
-    }
+
 
     /**
      * Creates a model entity based on parent key.

@@ -250,9 +250,9 @@ public class LembasEntity extends LembasObject implements Serializable {
                 f.set(this,value);
             }
         } catch (NoSuchFieldException e) {
-            e.printStackTrace();
+            //e.printStackTrace();
         } catch (IllegalAccessException e) {
-            e.printStackTrace();
+            //e.printStackTrace();
         }
 
         this.entity.setProperty(fieldName, value);
