@@ -42,6 +42,11 @@ public class EntityManager<T extends LembasEntity> {
         this.entityClass = entityClass;
     }
 
+    /**
+     * Delete entity from store
+     * @param entityKey
+     * @return
+     */
     public T deleteEntity(String entityKey) {
         return deleteEntity(getEntity(entityKey));
     }
@@ -89,7 +94,7 @@ public class EntityManager<T extends LembasEntity> {
         return false;
     }
 
-    private void initEntity(T handsomeEntity){
+    public void initEntity(T handsomeEntity){
         DatastoreService ds = getDatastoreService();
         Transaction txn = ds.beginTransaction();
 
@@ -140,16 +145,20 @@ public class EntityManager<T extends LembasEntity> {
      */
     public String getKind() {
         return entityClass.getSimpleName();
-        //return entityClass.getName();
     }
-
 
     public MemcacheService getCacheService(){
         return MemcacheServiceFactory.getMemcacheService(getKind());
     }
 
     public T getEntityFromCache(String key) {
-        return (T) getCacheService().get(key);
+        try {
+            return (T) getCacheService().get(key);
+        } catch (Exception e) {
+            // if anything goes wrong, clear the cache
+            getCacheService().delete(key);
+            return null;
+        }
     }
 
     public void storeEntityToCache(LembasEntity entity){
@@ -186,10 +195,20 @@ public class EntityManager<T extends LembasEntity> {
 
     public T getEntity(String objectKey){
         //Key key = KeyFactory.createKey(getKind(), objectKey);
-        Key key = KeyFactory.stringToKey(objectKey);
+        //Key key = KeyFactory.stringToKey(objectKey);
+        Key key = getKey(objectKey);
         return getEntity(key);
     }
 
+    public Key getKey(String objectKey){
+        Key key = null;
+        try{
+            key = KeyFactory.stringToKey(objectKey);
+        }catch ( IllegalArgumentException e){
+            key = KeyFactory.createKey(getKind(), objectKey);
+        }
+        return key;
+    }
 
     /**
      * Looks up an entity by key.
@@ -282,17 +301,36 @@ public class EntityManager<T extends LembasEntity> {
         return queryEntities(query);
     }
 
+//    public static ArrayList entitiesWithParentAndValuesSorted(Class kind , LembasEntity parent, Map<String, Object> values, Map<String, Query.SortDirection> sortDirectionMap){
+//        Query query = query(kind);
+//        if ( parent != null)
+//            query.setAncestor(parent.getKey());
+//
+//        setFilters(query, values);
+//
+//        if ( sortDirectionMap != null){
+//
+//            for ( String value : sortDirectionMap.keySet()){
+//                query.addSort(value, sortDirectionMap.get(value));
+//            }
+//        }
+//
+//        PreparedQuery preparedQuery = getDatastoreService().prepare(query);
+//        final Iterable<Entity> iterable = preparedQuery.asIterable(FetchOptions.Builder.withDefaults());
+//
+//
+//        return Lists.newArrayList (iterable.iterator());
+//
+//    }
 
-
-    /**
-     * Queries the com.nomad.lembas.datastore for an {@code Iterable} collection of entities.
-     *
-     *
-     * @param query com.nomad.lembas.datastore query object.
-     * @param options query options.
-     *
-     * @return an {@code Iterable} collection of com.nomad.lembas.datastore entities.
-     */
+        /**
+         * Queries the com.nomad.lembas.datastore for an {@code Iterable} collection of entities.
+         *
+         * @param query com.nomad.lembas.datastore query object.
+         * @param options query options.
+         *
+         * @return an {@code Iterable} collection of com.nomad.lembas.datastore entities.
+         */
     public ArrayList<T> queryEntities(Query query, FetchOptions options) {
         PreparedQuery preparedQuery = getDatastoreService().prepare(query);
         final Iterable<Entity> iterable = preparedQuery.asIterable(options);
@@ -330,6 +368,10 @@ public class EntityManager<T extends LembasEntity> {
     }
 
     /** conveinence methods */
+    public static Query query(Class kind){
+        return new Query (kind.getSimpleName());
+    }
+
     public Query query() {
 
         Query query = new Query(this.getKind());
@@ -359,10 +401,7 @@ public class EntityManager<T extends LembasEntity> {
             ArrayList<Query.Filter> filters = new ArrayList<>();
             for ( String fieldName : values.keySet()){
                 Object fieldValue = values.get(fieldName);
-                Query.Filter filter =
-                        new Query.FilterPredicate(fieldName,
-                                Query.FilterOperator.EQUAL, fieldValue);
-
+                Query.Filter filter = makeFilter(fieldName, fieldValue);
                 filters.add(filter);
             }
             if ( filters.size() > 1) {
@@ -375,6 +414,19 @@ public class EntityManager<T extends LembasEntity> {
 
         } else {
             return null;
+        }
+    }
+
+    public static Query.Filter  makeFilter(String fieldName, Object fieldValue){
+        if ( fieldValue instanceof QueryFilterValue){
+            QueryFilterValue v = (QueryFilterValue) fieldValue;
+
+            return  new Query.FilterPredicate(fieldName,
+                    v.operator, v.fieldValue);
+
+        }else {
+            return new Query.FilterPredicate(fieldName,
+                    Query.FilterOperator.EQUAL, fieldValue);
         }
     }
 
@@ -487,19 +539,30 @@ public class EntityManager<T extends LembasEntity> {
         return instance;
     }
 
-    public T newEntity() {
-        T instance = null;
-        try {
-            instance = this.entityClass.newInstance();
-        } catch (InstantiationException e) {
-            e.printStackTrace();
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        }
-        instance.entity = new Entity( KeyFactory.createKey(getKind(), instance.objectKey));
-        instance.objectKey = KeyFactory.keyToString(instance.entity.getKey());
 
-        storeEntityToCache(instance);
-        return instance;
+    /** */
+    public static QueryFilterValue greaterThan(Object fieldValue){
+        return new QueryFilterValue(Query.FilterOperator.GREATER_THAN, fieldValue);
+    }
+
+    public static QueryFilterValue lessThan(Object fieldValue){
+        return new QueryFilterValue(Query.FilterOperator.LESS_THAN, fieldValue);
+    }
+
+
+    public static class QueryFilterValue {
+        public Object   fieldValue;
+        public Query.FilterOperator operator;
+
+        public QueryFilterValue(Object fieldValue) {
+            this.fieldValue = fieldValue;
+        }
+
+        public QueryFilterValue( Query.FilterOperator operator, Object fieldValue) {
+            this.fieldValue = fieldValue;
+            this.operator = operator;
+        }
+
+
     }
 }

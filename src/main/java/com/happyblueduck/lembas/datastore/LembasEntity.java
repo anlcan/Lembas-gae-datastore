@@ -41,6 +41,7 @@ import java.util.UUID;
  * @author Michael Tang (ntang@google.com)
  */
 public class LembasEntity extends LembasObject implements Serializable {
+    public static final String LEMBAS_PROPERTY_IDENTIFIER = "$_";
     protected Entity entity;
 
     //private static final long serialVersionUID = 112671230986712376L;
@@ -80,22 +81,33 @@ public class LembasEntity extends LembasObject implements Serializable {
 
     public LembasEntity() {
         this.objectKey =  UUID.randomUUID().toString();
-//        Key key = KeyFactory.createKey(getClassName(), this.objectKey);
-//        this.entity = new Entity(key);
     }
 
     public LembasEntity(String keyName){
-        this.entity = new Entity(this.getClass().getSimpleName(), keyName);
+        this.entity = new Entity(getKind(), keyName);
         this.objectKey =  KeyFactory.keyToString(entity.getKey());
     }
 
 
     public LembasEntity(String keyName, Key parentKey){
-        this.entity = new Entity(this.getClass().getSimpleName(), keyName, parentKey);
+        this.entity = new Entity(getKind(), keyName, parentKey);
         this.objectKey =  KeyFactory.keyToString(entity.getKey());
     }
 
+    protected LembasEntity(Entity entity) {
+        super();
+        this.setEntity(entity);
+    }
 
+
+    public String getKind(){
+        return this.getClass().getSimpleName();
+    }
+
+    /**
+     * copies values from  lembasEntity to this entity. skip objectKey from that.
+     * @param that
+     */
     public void copy(LembasEntity that){
 
         ArrayList<Field> fields = Lists.newArrayList(that.getClass().getFields());
@@ -122,18 +134,51 @@ public class LembasEntity extends LembasObject implements Serializable {
         }
     }
 
+    /**
+     * sets the field name @{param:fieldName}
+     * @param fieldName
+     * @param value
+     * @throws NoSuchFieldException
+     * @throws IllegalAccessException
+     */
+    public void setField(String fieldName, Object value) throws NoSuchFieldException, IllegalAccessException {
+        Field f = this.getClass().getField(fieldName);
+        setField(f, value);
+    }
 
+    /**
+     * sets the fields, for this object end the entity
+     * @param f
+     * @param value
+     * @throws IllegalAccessException
+     */
     public void setField(Field f, Object value ) throws IllegalAccessException {
         //f.set(this, value);
         super.setField(f, value);
         Object _value = value;
 
         if ( this.entity != null){
-            if ( f.getType().isEnum()){
+            // storing lembasEntities
+            if ( LembasEntity.class.isAssignableFrom(value.getClass())){
+                try {
+                    String _serialized = LembasUtil.serialize(value).toJSONString();
+                    this.entity.setProperty(LEMBAS_PROPERTY_IDENTIFIER + f.getName(), _serialized);
 
-              _value = ((Enum)value).ordinal();
+                    return;
+                } catch (UtilSerializeException e) {
+                    e.printStackTrace();
+                }
             }
 
+            // store enums with their ordinals
+            if ( f.getType().isEnum()){
+                if ( value instanceof  Number)
+                    _value = value;
+                else
+                    _value = ((Enum)value).ordinal();
+            }
+
+            // poor man's cache
             if ( this.entity.getProperty(f.getName()) != _value)
                 this.entity.setProperty(f.getName(), _value);
 
@@ -167,13 +212,9 @@ public class LembasEntity extends LembasObject implements Serializable {
         copy(this);
     }
 
-    protected LembasEntity(Entity entity) {
-        super();
-        this.setEntity(entity);
-    }
 
 
-    public boolean setupFieldWithMehod(String fieldName, Object value, Method[] methods) throws InvocationTargetException, IllegalAccessException {
+    public boolean setupFieldWithMethod(String fieldName, Object value, Method[] methods) throws InvocationTargetException, IllegalAccessException {
         boolean consumed = false;
         // look for a setter method
         String setterName= fieldName;
@@ -198,6 +239,17 @@ public class LembasEntity extends LembasObject implements Serializable {
         return consumed;
     }
 
+    public void setLembasField(Field f, Object value) throws IllegalAccessException {
+        JSONObject jsonObject = (JSONObject) JSONValue.parse((String) value);
+        try {
+            LembasEntity obj = (LembasEntity) LembasUtil.deserialize(jsonObject);
+            f.set(this, obj);
+        } catch (UtilSerializeException e) {
+            e.printStackTrace();
+        }
+    }
+
+
     /**
      * Builds lembas object from entity, setup properties
      * @param entity
@@ -213,10 +265,17 @@ public class LembasEntity extends LembasObject implements Serializable {
         for (String fieldName : this.entity.getProperties().keySet()){
             try {
                 Object value = this.entity.getProperty(fieldName);
-                Field f = this.getClass().getField(fieldName);
-                //Class c = f.getClass();
 
-                boolean consumed = setupFieldWithMehod(fieldName, value, methods);
+                // reading lembas identifier
+                if ( fieldName.startsWith(LEMBAS_PROPERTY_IDENTIFIER) ){
+                    fieldName = fieldName.substring(2);
+                    Field f = this.getClass().getField(fieldName);
+                    setLembasField(f, value);
+                    continue;
+                }
+
+                Field f = this.getClass().getField(fieldName);
+                boolean consumed = setupFieldWithMethod(fieldName, value, methods);
 
                 if (!consumed) {
                     //f.set(this, value);
@@ -272,8 +331,13 @@ public class LembasEntity extends LembasObject implements Serializable {
         return this.entity.getParent();
     }
 
-    public JSONValue toJSON() {
-        return null;
+    public String toJSON() {
+        try {
+            return LembasUtil.serialize(this, false).toJSONString();
+        } catch (UtilSerializeException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 
     public Key getParentKey(){

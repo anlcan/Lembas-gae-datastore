@@ -10,37 +10,33 @@
 
     <properties>
         <appengine.app.version>1</appengine.app.version>
-        <appengine.target.version>1.8.8</appengine.target.version>
+        <appengine.target.version>1.9.7</appengine.target.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
 
     <distributionManagement>
         <downloadUrl>http://maven.happyblueduck.com/${project.artifactId}</downloadUrl>
+        <!--<repository>-->
+            <!--<uniqueVersion>false</uniqueVersion>-->
+            <!--<id>happyblueduck</id>-->
+            <!--<name>Lembas GAE backend</name>-->
+            <!--<url>ftp://happyblueduck.com/public_html/maven</url>-->
+            <!--<layout>default</layout>-->
+        <!--</repository>-->
+
         <repository>
-            <uniqueVersion>false</uniqueVersion>
-            <id>happyblueduck</id>
-            <name>Lembas GAE backend</name>
-            <url>ftp://happyblueduck.com/public_html/maven/${project.artifactId}</url>
-            <layout>default</layout>
+            <id>dropbox</id>
+            <url>file:///Users/anlcan/Dropbox/mvn-repository/${project.artifactId}</url>
         </repository>
     </distributionManagement>
 
-    <dependencyManagement>
-        <dependencies>
-        <dependency>
-            <groupId>com.happyblueduck.lembas</groupId>
-            <artifactId>lembas-core</artifactId>
-            <version>2.1</version>
-            <scope>compile</scope>
-        </dependency>
-        </dependencies>
-    </dependencyManagement>
+
 
     <repositories>
         <repository>
-            <id>happyblueduck</id>
-            <url>https://maven.happyblueduck</url>
+            <id>com.happyblueduck.lembas</id>
+            <url>http://maven.happyblueduck.com</url>
             <snapshots>
                 <enabled>true</enabled>
             </snapshots>
@@ -52,11 +48,18 @@
 
     <dependencies>
 
-	<dependency>
-	  <groupId>log4j</groupId>
-	  <artifactId>log4j</artifactId>
-	  <version>1.2.17</version>
-	</dependency>
+        <dependency>
+            <groupId>log4j</groupId>
+            <artifactId>log4j</artifactId>
+            <version>1.2.17</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.happyblueduck.lembas</groupId>
+            <artifactId>lembas-core</artifactId>
+            <version>2.1</version>
+            <scope>compile</scope>
+        </dependency>
 
         <dependency>
             <groupId>com.google.collections</groupId>
@@ -71,7 +74,7 @@
         </dependency>
 
         <dependency>
-            <groupId>lembas-core</groupId>
+            <groupId>com.happyblueduck.lembas</groupId>
             <artifactId>lembas-core</artifactId>
             <version>2.1</version>
             <scope>compile</scope>
