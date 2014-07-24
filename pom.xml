@@ -4,9 +4,10 @@
     <modelVersion>4.0.0</modelVersion>
     <packaging>jar</packaging>
     <version>1.0</version>
-
     <groupId>com.happyblueduck.lembas</groupId>
     <artifactId>lembas-gae-datastore</artifactId>
+
+    <name>lembas-gae-dtastore</name>
 
     <properties>
         <appengine.app.version>1</appengine.app.version>
@@ -14,39 +15,49 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
+    <description>
+        Lembas datastore manager for LembasObjects
+    </description>
+    <scm>
+        <url>https://github.com/anlcan/Lembas-gae-datastore</url>
+    </scm>
+
+    <developers>
+        <developer>
+            <name>Anil Can Baykal</name>
+            <email>anilcanbaykal@gmail.com</email>
+        </developer>
+    </developers>
+
+    <licenses>
+        <license>
+            <name>GNU General Public License (GPL)</name>
+            <url>http://www.gnu.org/licenses/gpl.txt</url>
+        </license>
+    </licenses>
+
+    <url>http://maven.apache.org</url>
+
 
     <distributionManagement>
-        <downloadUrl>http://maven.happyblueduck.com/${project.artifactId}</downloadUrl>
-        <!--<repository>-->
-            <!--<uniqueVersion>false</uniqueVersion>-->
-            <!--<id>happyblueduck</id>-->
-            <!--<name>Lembas GAE backend</name>-->
-            <!--<url>ftp://happyblueduck.com/public_html/maven</url>-->
-            <!--<layout>default</layout>-->
-        <!--</repository>-->
-
+        <snapshotRepository>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+        </snapshotRepository>
         <repository>
-            <id>dropbox</id>
-            <url>file:///Users/anlcan/Dropbox/mvn-repository/${project.artifactId}</url>
+            <id>ossrh</id>
+            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
         </repository>
     </distributionManagement>
 
-
-
-    <repositories>
-        <repository>
-            <id>com.happyblueduck.lembas</id>
-            <url>http://maven.happyblueduck.com</url>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-        </repository>
-    </repositories>
-
     <dependencies>
+
+        <dependency>
+            <groupId>com.happyblueduck.lembas</groupId>
+            <artifactId>lembas-core</artifactId>
+            <version>2.1</version>
+            <scope>compile</scope>
+        </dependency>
 
         <dependency>
             <groupId>log4j</groupId>
@@ -73,12 +84,7 @@
             <version>1.1.1</version>
         </dependency>
 
-        <dependency>
-            <groupId>com.happyblueduck.lembas</groupId>
-            <artifactId>lembas-core</artifactId>
-            <version>2.1</version>
-            <scope>compile</scope>
-        </dependency>
+
 
         <!-- Compile/runtime dependencies -->
         <dependency>
@@ -116,48 +122,62 @@
     <build>
         <sourceDirectory>src/main/java</sourceDirectory>
 
-        <extensions>
-            <!-- Enabling the use of FTP -->
-            <extension>
-                <groupId>org.apache.maven.wagon</groupId>
-                <artifactId>wagon-ftp</artifactId>
-                <version>2.5</version>
-            </extension>
-        </extensions>
-
         <plugins>
+
+            <!--http://central.sonatype.org/pages/apache-maven.html-->
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <version>2.5.1</version>
-                <artifactId>maven-compiler-plugin</artifactId>
+                <groupId>org.sonatype.plugins</groupId>
+                <artifactId>nexus-staging-maven-plugin</artifactId>
+                <version>1.6.2</version>
+                <extensions>true</extensions>
                 <configuration>
-                    <source>1.7</source>
-                    <target>1.7</target>
+                    <serverId>ossrh</serverId>
+                    <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+                    <autoReleaseAfterClose>true</autoReleaseAfterClose>
                 </configuration>
             </plugin>
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-war-plugin</artifactId>
-                <version>2.3</version>
-                <configuration>
-                    <archiveClasses>true</archiveClasses>
-                    <webResources>
-                        <!-- in order to interpolate version from pom into appengine-web.xml -->
-                        <resource>
-                            <directory>${basedir}/src/main/webapp/WEB-INF</directory>
-                            <filtering>true</filtering>
-                            <targetPath>WEB-INF</targetPath>
-                        </resource>
-                    </webResources>
-                </configuration>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>2.2.1</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar-no-fork</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>2.9.1</version>
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>1.5</version>
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
 
-            <plugin>
-                <groupId>com.google.appengine</groupId>
-                <artifactId>appengine-maven-plugin</artifactId>
-                <version>${appengine.target.version}</version>
-            </plugin>
         </plugins>
     </build>
 
